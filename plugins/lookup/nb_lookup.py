@@ -281,12 +281,11 @@ def get_endpoint(netbox, term):
             "endpoint": netbox.wireless.wireless_links
         }
 
-    else:
-        if "wireless" in term:
-            Display().v(
-                "pynetbox version %d.%d.%d does not support wireless app; please update to v6.4.0 or newer."
-                % (major, minor, patch)
-            )
+    elif "wireless" in term:
+        Display().v(
+            "pynetbox version %d.%d.%d does not support wireless app; please update to v6.4.0 or newer."
+            % (major, minor, patch)
+        )
 
     return netbox_endpoint_map[term]["endpoint"]
 
@@ -307,11 +306,8 @@ def build_filters(filters):
     for arg in args:
         for k, v in arg.items():
             if k not in filter:
-                filter[k] = list()
-                filter[k].append(v)
-            else:
-                filter[k].append(v)
-
+                filter[k] = []
+            filter[k].append(v)
     return filter
 
 
@@ -324,7 +320,7 @@ def get_plugin_endpoint(netbox, plugin, term):
         term: the term passed to the lookup function upon which the api
               call will be identified
     """
-    attr = "plugins.%s.%s" % (plugin, term)
+    attr = f"plugins.{plugin}.{term}"
 
     def _getattr(netbox, attr):
         return getattr(netbox, attr)
@@ -346,10 +342,7 @@ def make_netbox_call(nb_endpoint, filters=None):
         AnsibleError: Ansible Error containing an error message.
     """
     try:
-        if filters:
-            results = nb_endpoint.filter(**filters)
-        else:
-            results = nb_endpoint.all()
+        results = nb_endpoint.filter(**filters) if filters else nb_endpoint.all()
     except pynetbox.RequestError as e:
         if e.req.status_code == 404 and "plugins" in e:
             raise AnsibleError(
@@ -414,8 +407,7 @@ class LookupModule(LookupBase):
             netbox.http_session = session
         except FileNotFoundError:
             raise AnsibleError(
-                "%s cannot be found. Please make sure file exists."
-                % netbox_private_key_file
+                f"{netbox_private_key_file} cannot be found. Please make sure file exists."
             )
 
         results = []
@@ -426,13 +418,10 @@ class LookupModule(LookupBase):
                 try:
                     endpoint = get_endpoint(netbox, term)
                 except KeyError:
-                    raise AnsibleError(
-                        "Unrecognised term %s. Check documentation" % term
-                    )
+                    raise AnsibleError(f"Unrecognised term {term}. Check documentation")
 
             Display().vvvv(
-                "NetBox lookup for %s to %s using token %s filter %s"
-                % (term, netbox_api_endpoint, netbox_api_token, netbox_api_filter)
+                f"NetBox lookup for {term} to {netbox_api_endpoint} using token {netbox_api_token} filter {netbox_api_filter}"
             )
 
             if netbox_api_filter:
@@ -440,8 +429,7 @@ class LookupModule(LookupBase):
 
                 if "id" in filter:
                     Display().vvvv(
-                        "Filter is: %s and includes id, will use .get instead of .filter"
-                        % (filter)
+                        f"Filter is: {filter} and includes id, will use .get instead of .filter"
                     )
                     try:
                         id = int(filter["id"][0])
@@ -452,7 +440,7 @@ class LookupModule(LookupBase):
                     except pynetbox.RequestError as e:
                         raise AnsibleError(e.error)
 
-                Display().vvvv("filter is %s" % filter)
+                Display().vvvv(f"filter is {filter}")
 
             # Make call to NetBox API and capture any failures
             nb_data = make_netbox_call(

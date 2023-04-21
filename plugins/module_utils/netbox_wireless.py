@@ -57,9 +57,8 @@ class NetboxWirelessModule(NetboxModule):
             interface_b_device = self.module.params["data"]["interface_b"].get("device")
             name = f"{interface_a_device} {interface_a_name} <> {interface_b_device} {interface_b_name}"
 
-        if self.endpoint in SLUG_REQUIRED:
-            if not data.get("slug"):
-                data["slug"] = self._to_slug(name)
+        if self.endpoint in SLUG_REQUIRED and not data.get("slug"):
+            data["slug"] = self._to_slug(name)
 
         object_query_params = self._build_query_params(
             endpoint_name, data, user_query_params
@@ -76,6 +75,6 @@ class NetboxWirelessModule(NetboxModule):
         except AttributeError:
             serialized_object = self.nb_object
 
-        self.result.update({endpoint_name: serialized_object})
+        self.result[endpoint_name] = serialized_object
 
         self.module.exit_json(**self.result)
